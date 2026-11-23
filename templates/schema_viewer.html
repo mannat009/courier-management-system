@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Database Schema & ER Architecture | Courier DBMS{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Download buttons -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-stone-800 flex items-center space-x-2">
+                <i class="fa-solid fa-sitemap text-indigo-600"></i>
+                <span>Database Schema, Normalization & ER Architecture</span>
+            </h1>
+            <p class="text-stone-500 text-sm">3rd Normal Form (3NF) relational design for Courier Operations with integrity constraints, stored views, and automated triggers.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ url_for('download_sqlite_schema') }}" class="px-3.5 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-2">
+                <i class="fa-solid fa-download text-indigo-400"></i>
+                <span>Download SQLite schema.sql</span>
+            </a>
+            <a href="{{ url_for('download_mysql_schema') }}" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-2">
+                <i class="fa-solid fa-database"></i>
+                <span>Download MySQL Script</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ER Diagram Overview -->
+    <div class="bg-white rounded-xl border border-stone-200 shadow-sm p-6">
+        <div class="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-diagram-project text-indigo-600"></i>
+                <h2 class="font-bold text-stone-800 text-sm">Courier Entity-Relationship (ER) Architecture</h2>
+            </div>
+            <span class="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-semibold">3NF Normalized</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <div class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-1.5">
+                <div class="font-bold text-stone-800 flex items-center justify-between">
+                    <span>1. branches</span>
+                    <span class="text-[10px] bg-stone-200 px-1.5 py-0.5 rounded">Parent</span>
+                </div>
+                <p class="text-stone-500">Hubs, service centres and pickup points.</p>
+                <div class="text-[11px] font-mono text-indigo-700 pt-1">PK: branch_id</div>
+            </div>
+
+            <div class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-1.5">
+                <div class="font-bold text-stone-800 flex items-center justify-between">
+                    <span>2. employees &amp; 3. vehicles</span>
+                    <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">1:N with Branch</span>
+                </div>
+                <p class="text-stone-500">Staff roles, shifts, salary and the delivery fleet.</p>
+                <div class="text-[11px] font-mono text-blue-600 pt-1">FK: branch_id (SET NULL)</div>
+            </div>
+
+            <div class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-1.5">
+                <div class="font-bold text-stone-800 flex items-center justify-between">
+                    <span>4. customers &amp; 5. service_types</span>
+                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Masters</span>
+                </div>
+                <p class="text-stone-500">Senders with reward points; pricing plans by weight.</p>
+                <div class="text-[11px] font-mono text-emerald-700 pt-1">PK: customer_id, service_id</div>
+            </div>
+
+            <div class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-1.5">
+                <div class="font-bold text-stone-800 flex items-center justify-between">
+                    <span>6. shipments</span>
+                    <span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Master Booking</span>
+                </div>
+                <p class="text-stone-500">Linked to sender, 2 branches, service, agent and vehicle.</p>
+                <div class="text-[11px] font-mono text-purple-600 pt-1">6 FKs (service_id RESTRICT)</div>
+            </div>
+
+            <div class="p-4 bg-indigo-50/60 rounded-xl border border-indigo-200 space-y-1.5 sm:col-span-2 lg:col-span-4">
+                <div class="font-bold text-stone-800 flex items-center justify-between">
+                    <span>7. tracking_events (M:N)</span>
+                    <span class="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">Junction Table</span>
+                </div>
+                <p class="text-stone-600">Resolves the M:N between shipments &amp; branches: a shipment passes through many branches, and a branch scans many shipments. Stores status, remarks and timestamp for each scan.</p>
+                <div class="text-[11px] font-mono text-indigo-800 pt-1">FK: shipment_id (CASCADE), branch_id (SET NULL)</div>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-indigo-50/60 rounded-lg border border-indigo-200 text-xs text-indigo-900 flex items-center space-x-2">
+            <i class="fa-solid fa-circle-check text-indigo-600"></i>
+            <span><strong>Integrity Rules Enforced:</strong> <code class="bg-white px-1 py-0.5 rounded">PRAGMA foreign_keys = ON;</code>, positive weight &amp; charge bounds, status CHECK constraints, UNIQUE tracking numbers, and automatic status-sync trigger on every tracking scan.</span>
+        </div>
+    </div>
+
+    <!-- Detailed Table Schema Cards -->
+    <div>
+        <h2 class="text-lg font-bold text-stone-800 mb-4 flex items-center space-x-2">
+            <i class="fa-solid fa-table-cells text-stone-600"></i>
+            <span>Relational Table Definitions (DDL & Column Constraints)</span>
+        </h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {% for table_name, t_info in metadata.tables.items() %}
+            <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden flex flex-col">
+                <div class="px-5 py-3.5 bg-stone-900 text-white flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-table text-indigo-400"></i>
+                        <span class="font-bold font-mono text-sm">{{ table_name }}</span>
+                    </div>
+                    <span class="text-xs bg-stone-800 px-2 py-0.5 rounded text-stone-300 font-mono">{{ t_info.count }} records</span>
+                </div>
+
+                <div class="p-4 flex-1">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="text-stone-400 uppercase font-semibold border-b border-stone-200 text-[11px]">
+                                <th class="pb-2">Key</th>
+                                <th class="pb-2">Column Name</th>
+                                <th class="pb-2">Data Type</th>
+                                <th class="pb-2 text-center">Nullable</th>
+                                <th class="pb-2 text-right">Default</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-100 font-mono">
+                            {% for col in t_info.columns %}
+                            <tr class="hover:bg-stone-50">
+                                <td class="py-2">
+                                    {% if col.pk %}
+                                        <span class="px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded font-bold text-[10px]" title="Primary Key">🔑 PK</span>
+                                    {% else %}
+                                        {% set is_fk = false %}
+                                        {% for fk in t_info.foreign_keys %}
+                                            {% if fk.from == col.name %}
+                                                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[10px]" title="Foreign Key to {{ fk.table }}.{{ fk.to }}">🔗 FK</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                </td>
+                                <td class="py-2 font-semibold text-stone-800">{{ col.name }}</td>
+                                <td class="py-2 text-indigo-700">{{ col.type }}</td>
+                                <td class="py-2 text-center">
+                                    {% if col.notnull %}
+                                        <span class="text-rose-500 font-bold">NO</span>
+                                    {% else %}
+                                        <span class="text-stone-400">YES</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-2 text-right text-stone-400 text-[11px]">{{ col.dflt_value or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {% if t_info.foreign_keys %}
+                    <div class="mt-4 pt-3 border-t border-stone-100 text-[11px] text-stone-500 space-y-1">
+                        <span class="font-semibold text-stone-700">Foreign Key Constraints:</span>
+                        {% for fk in t_info.foreign_keys %}
+                            <div class="font-mono text-blue-700 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-arrow-turn-down text-stone-400 text-[10px]"></i>
+                                <span>{{ fk.from }} ➔ {{ fk.table }}({{ fk.to }}) [ON DELETE {{ fk.on_delete }}]</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Database Views Section -->
+    <div class="bg-white rounded-xl border border-stone-200 shadow-sm p-6">
+        <div class="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-eye text-purple-600"></i>
+                <h2 class="font-bold text-stone-800 text-sm">Stored Database Views (CREATE VIEW)</h2>
+            </div>
+            <span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">{{ metadata.views|length }} Views Defined</span>
+        </div>
+
+        <div class="space-y-4">
+            {% for v in metadata.views %}
+            <div class="border border-stone-200 rounded-lg p-4 bg-stone-50/50">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold font-mono text-sm text-purple-900">{{ v.name }}</span>
+                    <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-semibold">VIEW</span>
+                </div>
+                <pre class="bg-stone-900 text-emerald-400 text-xs font-mono p-3 rounded-lg overflow-x-auto whitespace-pre-wrap">{{ v.sql }}</pre>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Database Triggers Section -->
+    <div class="bg-white rounded-xl border border-stone-200 shadow-sm p-6">
+        <div class="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-bolt text-indigo-500"></i>
+                <h2 class="font-bold text-stone-800 text-sm">Automated Triggers (CREATE TRIGGER)</h2>
+            </div>
+            <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">{{ metadata.triggers|length }} Active Triggers</span>
+        </div>
+
+        <div class="space-y-4">
+            {% for trg in metadata.triggers %}
+            <div class="border border-stone-200 rounded-lg p-4 bg-stone-50/50">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold font-mono text-sm text-stone-800">{{ trg.name }}</span>
+                        <span class="text-xs text-stone-500 font-normal">on table <code class="font-mono text-indigo-700 font-semibold">{{ trg.table }}</code></span>
+                    </div>
+                    <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-semibold">TRIGGER</span>
+                </div>
+                <pre class="bg-stone-900 text-indigo-300 text-xs font-mono p-3 rounded-lg overflow-x-auto whitespace-pre-wrap">{{ trg.sql }}</pre>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

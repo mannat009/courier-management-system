@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Shipments | Courier DBMS{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-stone-800 flex items-center space-x-2"><i class="fa-solid fa-box text-indigo-600"></i><span>Shipments & Billing</span></h1>
+            <p class="text-stone-500 text-sm">Core transaction module &mdash; booking, scanning, assignment and payment. Triggers keep status, fleet and rewards in sync.</p>
+        </div>
+        <button onclick="toggleModal('bookModal', true)" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm shadow-sm transition flex items-center space-x-2 self-start sm:self-auto">
+            <i class="fa-solid fa-plus"></i><span>Book Shipment</span>
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-3">
+        <input type="text" name="search" value="{{ search }}" placeholder="Tracking no / receiver / sender..." class="px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+        <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+            <option value="">All Statuses</option>
+            {% for s in statuses %}<option {% if s == status_filter %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+        <select name="service" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+            <option value="">All Service Plans</option>
+            {% for s in all_services %}<option value="{{ s.service_id }}" {% if service_filter|string == s.service_id|string %}selected{% endif %}>{{ s.service_name }}</option>{% endfor %}
+        </select>
+        <button class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-sm rounded-lg">Apply Filters</button>
+    </form>
+
+    <div class="bg-stone-900 text-stone-200 rounded-xl p-4 text-xs font-mono shadow-inner border border-stone-800">
+        <div class="text-stone-400 mb-1.5 pb-1 border-b border-stone-800">Live SQL used for this page ({{ shipments|length }} rows)</div>
+        <pre class="whitespace-pre-wrap text-emerald-400 max-h-40 overflow-y-auto">{{ sql_used.strip() }}</pre>
+    </div>
+
+    <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead><tr class="bg-stone-50 text-xs font-semibold text-stone-500 uppercase border-b border-stone-200">
+                    <th class="py-3 px-4">Tracking No.</th><th class="py-3 px-4">Sender &rarr; Receiver</th><th class="py-3 px-4">Route</th><th class="py-3 px-4">Service</th>
+                    <th class="py-3 px-4">Agent / Vehicle</th><th class="py-3 px-4 text-right">Charge</th><th class="py-3 px-4 text-center">Status</th><th class="py-3 px-4 text-right">Actions</th>
+                </tr></thead>
+                <tbody class="divide-y divide-stone-100">
+                    {% for s in shipments %}
+                    <tr class="hover:bg-stone-50 align-top">
+                        <td class="py-3.5 px-4">
+                            <a href="{{ url_for('track', tn=s.tracking_number) }}" class="font-mono font-bold text-indigo-700 hover:underline text-xs">{{ s.tracking_number }}</a>
+                            <div class="text-[10px] text-stone-400 mt-0.5">{{ s.booked_at }}</div>
+                        </td>
+                        <td class="py-3.5 px-4 text-xs"><div class="font-semibold text-stone-800">{{ s.sender_name }}</div><div class="text-stone-500">&rarr; {{ s.receiver_name }}</div><div class="text-[10px] text-stone-400">{{ s.package_type }} &bull; {{ s.weight_kg }} kg</div></td>
+                        <td class="py-3.5 px-4 text-xs text-stone-700">{{ s.origin_city or '?' }} <i class="fa-solid fa-arrow-right text-indigo-400 text-[10px] mx-0.5"></i> {{ s.destination_city or '?' }}</td>
+                        <td class="py-3.5 px-4 text-xs text-stone-700">{{ s.service_name }}</td>
+                        <td class="py-3.5 px-4 text-xs">
+                            <div class="text-stone-700">{{ s.agent_name }}</div>
+                            <div class="font-mono text-[10px] text-stone-400">{{ s.vehicle_number or 'No vehicle' }}</div>
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="font-mono font-bold text-stone-800 text-xs">₹{{ "{:,.2f}".format(s.total_charge) }}</div>
+                            <span class="text-[10px] font-bold {% if s.payment_status == 'Paid' %}text-emerald-600{% elif s.payment_status == 'Refunded' %}text-rose-600{% else %}text-amber-600{% endif %}">{{ s.payment_status }}{% if s.payment_method != 'Pending' %} &bull; {{ s.payment_method }}{% endif %}</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap {% if s.status == 'Delivered' %}bg-emerald-100 text-emerald-700{% elif s.status in ['Cancelled','Returned'] %}bg-rose-100 text-rose-700{% elif s.status == 'Booked' %}bg-stone-200 text-stone-700{% else %}bg-indigo-100 text-indigo-700{% endif %}">{{ s.status }}</span>
+                            <div class="text-[10px] text-stone-400 mt-1">{{ s.scan_events }} scans</div>
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <button onclick="openScan({{ s.shipment_id }}, '{{ s.tracking_number }}')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] rounded font-medium" title="Add tracking scan">Scan</button>
+                            <button onclick="openPay({{ s.shipment_id }}, '{{ s.tracking_number }}', '{{ s.payment_status }}', '{{ s.payment_method }}', {{ s.agent_id or 'null' }})" class="px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-800 text-[11px] rounded font-medium">Pay / Assign</button>
+                            <form action="{{ url_for('delete_shipment', shipment_id=s.shipment_id) }}" method="POST" class="inline" onsubmit="return confirm('Delete shipment and all its scans?');">
+                                <button class="px-2 py-1 text-rose-600 hover:bg-rose-50 text-[11px] rounded"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="py-10 text-center text-stone-400 text-sm">No shipments match the current filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Book Shipment -->
+<div id="bookModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-stone-200 max-h-[92vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+            <h3 class="text-lg font-bold text-stone-800 flex items-center space-x-2"><i class="fa-solid fa-box-open text-indigo-600"></i><span>Book Shipment (INSERT)</span></h3>
+            <button onclick="toggleModal('bookModal', false)" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <form action="{{ url_for('create_shipment') }}" method="POST" class="mt-4 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Sender (registered)</label>
+                    <select name="sender_id" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"><option value="">Walk-in Sender</option>{% for c in dropdowns.customers %}<option value="{{ c.customer_id }}">{{ c.name }}</option>{% endfor %}</select></div>
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Package Type</label>
+                    <select name="package_type" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">{% for p in package_types %}<option {% if p == 'Parcel' %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Receiver Name *</label><input type="text" name="receiver_name" required class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"></div>
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Receiver Phone *</label><input type="text" name="receiver_phone" required class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg font-mono"></div>
+            </div>
+            <div><label class="block text-xs font-semibold text-stone-700 mb-1">Receiver Address *</label><input type="text" name="receiver_address" required class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Origin Branch *</label>
+                    <select name="origin_branch_id" required class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">{% for b in dropdowns.branches %}<option value="{{ b.branch_id }}">{{ b.city }} ({{ b.branch_code }})</option>{% endfor %}</select></div>
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Destination Branch *</label>
+                    <select name="destination_branch_id" required class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">{% for b in dropdowns.branches %}<option value="{{ b.branch_id }}">{{ b.city }} ({{ b.branch_code }})</option>{% endfor %}</select></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Service Plan *</label>
+                    <select id="bk_service" name="service_id" required onchange="calcCharge()" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">{% for s in dropdowns.services %}<option value="{{ s.service_id }}" data-base="{{ s.base_rate }}" data-kg="{{ s.rate_per_kg }}">{{ s.service_name }} ({{ s.delivery_days }}d)</option>{% endfor %}</select></div>
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Weight (kg) *</label><input id="bk_weight" type="number" step="0.01" min="0.01" name="weight_kg" required oninput="calcCharge()" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Delivery Agent</label>
+                    <select name="agent_id" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"><option value="">Assign later</option>{% for a in dropdowns.agents %}<option value="{{ a.employee_id }}">{{ a.name }} ({{ a.city }})</option>{% endfor %}</select></div>
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Vehicle (available only)</label>
+                    <select name="vehicle_id" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"><option value="">No vehicle</option>{% for v in dropdowns.vehicles if v.status == 'Available' %}<option value="{{ v.vehicle_id }}">{{ v.vehicle_number }} - {{ v.vehicle_type }} ({{ "%.0f"|format(v.capacity_kg) }} kg)</option>{% endfor %}</select></div>
+            </div>
+            <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-sm flex items-center justify-between">
+                <span class="text-indigo-900 font-medium">Estimated Charge</span>
+                <span id="bk_charge" class="font-mono font-bold text-indigo-800 text-lg">₹0.00</span>
+            </div>
+            <div class="pt-3 border-t border-stone-100 flex justify-end space-x-3">
+                <button type="button" onclick="toggleModal('bookModal', false)" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm">Book Shipment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Tracking Scan -->
+<div id="scanModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200">
+        <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+            <h3 class="text-lg font-bold text-stone-800">Add Tracking Scan <span id="scanTn" class="font-mono text-sm text-indigo-700"></span></h3>
+            <button onclick="toggleModal('scanModal', false)" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <form id="scanForm" method="POST" class="mt-4 space-y-4">
+            <div><label class="block text-xs font-semibold text-stone-700 mb-1">New Status</label>
+                <select name="status" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">{% for s in statuses if s != 'Booked' %}<option>{{ s }}</option>{% endfor %}</select></div>
+            <div><label class="block text-xs font-semibold text-stone-700 mb-1">Scanned At Branch</label>
+                <select name="branch_id" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"><option value="">In network / unknown</option>{% for b in dropdowns.branches %}<option value="{{ b.branch_id }}">{{ b.city }} ({{ b.branch_code }})</option>{% endfor %}</select></div>
+            <div><label class="block text-xs font-semibold text-stone-700 mb-1">Remarks</label><input type="text" name="remarks" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"></div>
+            <p class="text-[11px] text-stone-500 bg-stone-50 rounded p-2"><i class="fa-solid fa-bolt text-indigo-500 mr-1"></i>An INSERT into <code>tracking_events</code> fires a trigger that updates <code>shipments.status</code> automatically.</p>
+            <div class="pt-3 border-t border-stone-100 flex justify-end space-x-3">
+                <button type="button" onclick="toggleModal('scanModal', false)" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm">Record Scan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Payment & Assignment -->
+<div id="payModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200">
+        <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+            <h3 class="text-lg font-bold text-stone-800">Payment & Agent <span id="payTn" class="font-mono text-sm text-indigo-700"></span></h3>
+            <button onclick="toggleModal('payModal', false)" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <form id="payForm" method="POST" class="mt-4 space-y-3">
+            <div class="text-xs font-bold text-stone-500 uppercase">Payment (UPDATE)</div>
+            <div class="grid grid-cols-2 gap-3">
+                <select id="payStatus" name="payment_status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg"><option>Unpaid</option><option>Paid</option><option>Refunded</option></select>
+                <select id="payMethod" name="payment_method" class="px-3 py-2 text-sm border border-stone-300 rounded-lg"><option>Pending</option><option>Cash</option><option>Card</option><option>UPI</option></select>
+            </div>
+            <button class="w-full px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-sm rounded-lg">Save Payment</button>
+        </form>
+        <form id="assignForm" method="POST" class="mt-5 pt-4 border-t border-stone-100 space-y-3">
+            <div class="text-xs font-bold text-stone-500 uppercase">Assign Delivery Agent (UPDATE)</div>
+            <select id="assignAgent" name="agent_id" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"><option value="">Unassigned</option>{% for a in dropdowns.agents %}<option value="{{ a.employee_id }}">{{ a.name }} ({{ a.city }})</option>{% endfor %}</select>
+            <button class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">Assign Agent</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calcCharge() {
+    const sel = document.getElementById('bk_service');
+    const opt = sel.options[sel.selectedIndex];
+    const w = parseFloat(document.getElementById('bk_weight').value) || 0;
+    const total = opt ? parseFloat(opt.dataset.base) + parseFloat(opt.dataset.kg) * w : 0;
+    document.getElementById('bk_charge').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+function openScan(id, tn) {
+    document.getElementById('scanForm').action = "{{ url_for('add_scan', shipment_id=0) }}".replace(/0$/, id);
+    document.getElementById('scanTn').textContent = tn;
+    toggleModal('scanModal', true);
+}
+function openPay(id, tn, status, method, agent) {
+    document.getElementById('payForm').action = "{{ url_for('update_payment', shipment_id=0) }}".replace(/0$/, id);
+    document.getElementById('assignForm').action = "{{ url_for('assign_agent', shipment_id=0) }}".replace(/0$/, id);
+    document.getElementById('payTn').textContent = tn;
+    document.getElementById('payStatus').value = status;
+    document.getElementById('payMethod').value = method;
+    document.getElementById('assignAgent').value = agent === null ? '' : agent;
+    toggleModal('payModal', true);
+}
+calcCharge();
+</script>
+{% endblock %}

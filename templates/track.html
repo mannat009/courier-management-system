@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Track Shipment | Courier DBMS{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-4xl mx-auto">
+    <div>
+        <h1 class="text-2xl font-bold text-stone-800 flex items-center space-x-2"><i class="fa-solid fa-location-dot text-indigo-600"></i><span>Track a Shipment</span></h1>
+        <p class="text-stone-500 text-sm">Enter a tracking number to view its full scan history from the <code class="text-indigo-600">tracking_events</code> table.</p>
+    </div>
+
+    <form method="GET" class="bg-white p-4 rounded-xl border border-stone-200 shadow-sm flex gap-3">
+        <input type="text" name="tn" value="{{ tn }}" placeholder="e.g. PDB-2026-0004" class="flex-1 px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono uppercase">
+        <button class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg"><i class="fa-solid fa-magnifying-glass mr-1"></i>Track</button>
+    </form>
+
+    {% if shipment %}
+    <div class="bg-white rounded-xl border border-stone-200 shadow-sm p-6">
+        <div class="flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-stone-100">
+            <div>
+                <div class="font-mono font-bold text-lg text-stone-900">{{ shipment.tracking_number }}</div>
+                <div class="text-xs text-stone-500 mt-0.5">{{ shipment.service_name }} &bull; {{ shipment.package_type }} &bull; {{ shipment.weight_kg }} kg</div>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-bold {% if shipment.status == 'Delivered' %}bg-emerald-100 text-emerald-700{% elif shipment.status in ['Cancelled','Returned'] %}bg-rose-100 text-rose-700{% elif shipment.status == 'Booked' %}bg-stone-200 text-stone-700{% else %}bg-indigo-100 text-indigo-700{% endif %}">{{ shipment.status }}</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-xs">
+            <div><div class="text-stone-400 uppercase font-semibold">From</div><div class="font-semibold text-stone-800 mt-0.5">{{ shipment.sender_name }}</div><div class="text-stone-500">{{ shipment.origin_city }}</div></div>
+            <div><div class="text-stone-400 uppercase font-semibold">To</div><div class="font-semibold text-stone-800 mt-0.5">{{ shipment.receiver_name }}</div><div class="text-stone-500">{{ shipment.destination_city }}</div></div>
+            <div><div class="text-stone-400 uppercase font-semibold">Delivery Agent</div><div class="font-semibold text-stone-800 mt-0.5">{{ shipment.agent_name }}</div></div>
+            <div><div class="text-stone-400 uppercase font-semibold">Charge</div><div class="font-mono font-bold text-stone-800 mt-0.5">₹{{ "{:,.2f}".format(shipment.total_charge) }}</div><div class="text-stone-500">{{ shipment.payment_status }}</div></div>
+        </div>
+
+        <h2 class="font-bold text-sm text-stone-800 mt-6 mb-4 flex items-center space-x-2"><i class="fa-solid fa-timeline text-indigo-600"></i><span>Scan History ({{ events|length }} events)</span></h2>
+        <ol class="relative border-l-2 border-indigo-200 ml-3 space-y-5">
+            {% for e in events %}
+            <li class="ml-5">
+                <span class="absolute -left-[9px] w-4 h-4 rounded-full border-2 border-white {% if e.status == 'Delivered' %}bg-emerald-500{% elif e.status in ['Cancelled','Returned'] %}bg-rose-500{% else %}bg-indigo-500{% endif %}"></span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-semibold text-sm text-stone-900">{{ e.status }}</span>
+                    <span class="text-[11px] text-stone-400 font-mono">{{ e.event_time }}</span>
+                </div>
+                <div class="text-xs text-stone-500">{{ e.branch_name }}{% if e.city %}, {{ e.city }}{% endif %}</div>
+                <div class="text-xs text-stone-700 mt-0.5">{{ e.remarks }}</div>
+            </li>
+            {% endfor %}
+        </ol>
+
+        {% if shipment.status not in ['Delivered', 'Returned', 'Cancelled'] %}
+        <form action="{{ url_for('add_scan', shipment_id=shipment.shipment_id) }}" method="POST" class="mt-8 pt-5 border-t border-stone-100 grid grid-cols-1 md:grid-cols-4 gap-3">
+            <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">{% for s in statuses if s != 'Booked' %}<option>{{ s }}</option>{% endfor %}</select>
+            <select name="branch_id" class="px-3 py-2 text-sm border border-stone-300 rounded-lg"><option value="">In network</option>{% for b in branches %}<option value="{{ b.branch_id }}">{{ b.city }}</option>{% endfor %}</select>
+            <input type="text" name="remarks" placeholder="Remarks" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+            <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg font-medium">Add Scan</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

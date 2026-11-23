@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Customers & Rewards | Courier DBMS{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-stone-800 flex items-center space-x-2">
+                <i class="fa-solid fa-users text-indigo-600"></i>
+                <span>Customer Directory & Reward Points</span>
+            </h1>
+            <p class="text-stone-500 text-sm">Registered senders, shipment history and automated reward points accumulation.</p>
+        </div>
+        <button onclick="toggleModal('addCustomerModal', true)" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm shadow-sm transition flex items-center space-x-2 self-start sm:self-auto">
+            <i class="fa-solid fa-user-plus"></i><span>Register Customer</span>
+        </button>
+    </div>
+
+    <div class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+            <span class="text-sm font-semibold text-stone-700">Total Customers: <span class="text-indigo-600 font-bold">{{ customers|length }}</span></span>
+            <span class="text-xs text-stone-400">Trigger Rule: <code class="text-indigo-600">1 reward point per ₹100 charged on delivered shipments</code></span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="bg-stone-50 text-xs font-semibold text-stone-500 uppercase border-b border-stone-200">
+                        <th class="py-3 px-4">ID</th><th class="py-3 px-4">Name</th><th class="py-3 px-4">Phone</th><th class="py-3 px-4">City</th>
+                        <th class="py-3 px-4 text-center">Shipments</th><th class="py-3 px-4 text-right">Lifetime Spend</th><th class="py-3 px-4 text-center">Reward Points</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-stone-100">
+                    {% for c in customers %}
+                    <tr class="hover:bg-stone-50 transition">
+                        <td class="py-3.5 px-4 font-mono text-stone-400 text-xs">#{{ c.customer_id }}</td>
+                        <td class="py-3.5 px-4"><div class="font-semibold text-stone-900">{{ c.name }}</div><div class="text-xs text-stone-400">{{ c.email or 'N/A' }}</div></td>
+                        <td class="py-3.5 px-4 font-mono text-xs text-stone-700">{{ c.phone }}</td>
+                        <td class="py-3.5 px-4 text-xs text-stone-600">{{ c.city or '-' }}</td>
+                        <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-0.5 bg-stone-100 text-stone-800 rounded-full text-xs font-semibold font-mono">{{ c.total_shipments }}</span></td>
+                        <td class="py-3.5 px-4 text-right font-mono font-bold text-stone-800">₹{{ "{:,.2f}".format(c.total_spend) }}</td>
+                        <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full text-xs font-bold">⭐ {{ c.reward_points }} pts</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="addCustomerModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200">
+        <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+            <h3 class="text-lg font-bold text-stone-800 flex items-center space-x-2"><i class="fa-solid fa-user-plus text-indigo-600"></i><span>Register Customer (INSERT)</span></h3>
+            <button onclick="toggleModal('addCustomerModal', false)" class="text-stone-400 hover:text-stone-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <form action="{{ url_for('add_customer') }}" method="POST" class="mt-4 space-y-4">
+            <div><label class="block text-xs font-semibold text-stone-700 mb-1">Full Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Ramesh Chandra" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></div>
+            <div><label class="block text-xs font-semibold text-stone-700 mb-1">Phone Number (Unique) *</label>
+                <input type="text" name="phone" required placeholder="+91-..." class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono"></div>
+            <div><label class="block text-xs font-semibold text-stone-700 mb-1">Email Address</label>
+                <input type="email" name="email" placeholder="customer@mail.com" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">City</label>
+                    <input type="text" name="city" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></div>
+                <div><label class="block text-xs font-semibold text-stone-700 mb-1">Address</label>
+                    <input type="text" name="address" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></div>
+            </div>
+            <div class="pt-3 border-t border-stone-100 flex justify-end space-x-3">
+                <button type="button" onclick="toggleModal('addCustomerModal', false)" class="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm">Save Customer</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
