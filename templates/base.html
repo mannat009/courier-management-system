@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ParcelDB Portal{% endblock %} | Courier DBMS Project</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-stone-50 text-stone-800 flex flex-col min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-stone-900 text-white shadow-lg sticky top-0 z-50 border-b border-stone-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Title -->
+                <div class="flex items-center space-x-3">
+                    <a href="{{ url_for('index') }}" class="flex items-center space-x-2 text-white hover:text-indigo-400 transition">
+                        <div class="bg-indigo-600 text-white p-2 rounded-lg shadow">
+                            <i class="fa-solid fa-truck-fast text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-lg tracking-tight">Parcel<span class="text-indigo-400">CMS</span></span>
+                            <span class="hidden md:inline-block text-xs text-stone-400 ml-2 px-2 py-0.5 bg-stone-800 rounded border border-stone-700">DBMS Academic Project</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="hidden xl:flex items-center space-x-1 text-sm font-medium">
+                    <a href="{{ url_for('index') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'index' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard
+                    </a>
+                    <a href="{{ url_for('shipments') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'shipments' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-box mr-1.5"></i> Shipments
+                    </a>
+                    <a href="{{ url_for('track') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'track' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-location-dot mr-1.5"></i> Track
+                    </a>
+                    <a href="{{ url_for('services') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'services' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-tags mr-1.5"></i> Service Plans
+                    </a>
+                    <a href="{{ url_for('branches') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'branches' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-building mr-1.5"></i> Branches
+                    </a>
+                    <a href="{{ url_for('vehicles') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'vehicles' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-truck mr-1.5"></i> Fleet
+                    </a>
+                    <a href="{{ url_for('employees') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'employees' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-user-tie mr-1.5"></i> Employees
+                    </a>
+                    <a href="{{ url_for('customers') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'customers' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-users mr-1.5"></i> Customers
+                    </a>
+
+                    <span class="h-5 w-px bg-stone-700 mx-2"></span>
+
+                    <!-- SQL Query Lab (Highlighted!) -->
+                    <a href="{{ url_for('query_lab') }}" class="px-3 py-1.5 rounded-md bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white border border-indigo-500/40 transition font-semibold flex items-center space-x-1.5">
+                        <i class="fa-solid fa-terminal text-indigo-400"></i>
+                        <span>SQL Lab</span>
+                        <span class="text-[10px] bg-indigo-500 text-white px-1.5 py-0.2 rounded-full font-bold ml-1">Live</span>
+                    </a>
+
+                    <a href="{{ url_for('schema_viewer') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'schema_viewer' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-sitemap mr-1.5"></i> Schema
+                    </a>
+
+                    <a href="{{ url_for('audit_logs') }}" class="px-3 py-2 rounded-md hover:bg-stone-800 hover:text-indigo-300 transition {% if request.endpoint == 'audit_logs' %}bg-stone-800 text-indigo-400{% else %}text-stone-300{% endif %}">
+                        <i class="fa-solid fa-bolt text-indigo-400 mr-1.5"></i> Triggers
+                    </a>
+                </nav>
+
+                <!-- Actions: DB Reset -->
+                <div class="flex items-center space-x-3">
+                    <form action="{{ url_for('reset_db') }}" method="POST" onsubmit="return confirm('Reset all database tables to default sample seed data? This will restore original test records.');">
+                        <button type="submit" class="px-2.5 py-1.5 text-xs font-medium text-stone-300 hover:text-white bg-stone-800 hover:bg-red-900/60 border border-stone-700 hover:border-red-700 rounded-md transition flex items-center space-x-1" title="Reset to original sample data">
+                            <i class="fa-solid fa-arrow-rotate-left text-stone-400"></i>
+                            <span class="hidden sm:inline">Reset DB</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile / tablet sub-navigation -->
+        <div class="xl:hidden bg-stone-800 px-4 py-2 flex flex-wrap gap-2 text-xs border-t border-stone-700">
+            <a href="{{ url_for('index') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Dashboard</a>
+            <a href="{{ url_for('shipments') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Shipments</a>
+            <a href="{{ url_for('track') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Track</a>
+            <a href="{{ url_for('services') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Service Plans</a>
+            <a href="{{ url_for('branches') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Branches</a>
+            <a href="{{ url_for('vehicles') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Fleet</a>
+            <a href="{{ url_for('employees') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Employees</a>
+            <a href="{{ url_for('customers') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Customers</a>
+            <a href="{{ url_for('query_lab') }}" class="px-2 py-1 rounded bg-indigo-600 text-white font-semibold">SQL Lab</a>
+            <a href="{{ url_for('schema_viewer') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Schema</a>
+            <a href="{{ url_for('audit_logs') }}" class="px-2 py-1 rounded bg-stone-700 text-stone-200">Triggers</a>
+        </div>
+    </header>
+
+    <!-- Flash Messages -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-3 p-4 rounded-lg flex items-center justify-between border shadow-sm {% if category == 'success' %}bg-emerald-50 text-emerald-800 border-emerald-200{% elif category == 'danger' %}bg-rose-50 text-rose-800 border-rose-200{% elif category == 'info' %}bg-sky-50 text-sky-800 border-sky-200{% else %}bg-indigo-50 text-indigo-800 border-indigo-200{% endif %}" role="alert">
+                        <div class="flex items-center space-x-2 text-sm font-medium">
+                            {% if category == 'success' %}
+                                <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+                            {% elif category == 'danger' %}
+                                <i class="fa-solid fa-circle-exclamation text-rose-600 text-base"></i>
+                            {% else %}
+                                <i class="fa-solid fa-circle-info text-sky-600 text-base"></i>
+                            {% endif %}
+                            <span>{{ message }}</span>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="text-stone-400 hover:text-stone-600">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-stone-200 py-6 text-sm text-stone-500 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-truck-fast text-indigo-600"></i>
+                <span class="font-semibold text-stone-700">Courier Management System (DBMS Project)</span>
+                <span>&bull; Relational SQL Backend</span>
+            </div>
+            <div class="flex items-center space-x-4 text-xs text-stone-500">
+                <span><i class="fa-solid fa-code-commit text-indigo-600 mr-1"></i>3NF Normalized Schema</span>
+                <span><i class="fa-solid fa-key text-blue-500 mr-1"></i>Integrity Constraints</span>
+                <span><i class="fa-solid fa-bolt text-emerald-500 mr-1"></i>Automated Triggers &amp; Views</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    function toggleModal(id, show) {
+        const m = document.getElementById(id);
+        if (!m) return;
+        m.classList.toggle('hidden', !show);
+        m.classList.toggle('flex', show);
+    }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
